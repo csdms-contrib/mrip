@@ -1,0 +1,75 @@
+function [velocity, moving, moving_old, xprt]=movesandinsus100(velocity, moving, i, jump_frac, n, p);
+
+%Copyright (C) <2007> <Edith Gallagher>  
+%Developer can be contacted at 
+%edith.gallagher@fandm.edu
+%or
+%Edith Gallagher
+%Franklin and Marshall College
+%PO Box 3003
+%Lancaster, PA 17604-3003
+
+%This program is free software; you can redistribute it and/or modify it under the terms of 
+%the GNU General Public License as published by the Free Software Foundation; either 
+%version 2 of the License, or (at your option) any later version.  
+%This program is distributed in the hope that it will be useful, but WITHOUT ANY 
+%WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
+%PARTICULAR PURPOSE. See the GNU General Public License for more details.  
+%You should have received a copy of the GNU General Public License (gpl.txt) along 
+%with this program; if not, go to http://www.gnu.org/licenses/gpl-2.0.txt or 
+%write to the Free Software Foundation, Inc., 
+%51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.  
+
+
+%4/3/09 output moving_old so we can look at transport
+
+%now move the 'moving' water matrix
+    %jump matrix:
+    %higher velocities take the sediment further down stream
+    
+    jump=round(velocity(:,:)./jump_frac); %suspended load moves forward with 
+                                    %the water at 1/jump_frac of the velocity
+                                    %jump is a number of blocks to move forward which are
+                                    %each 10 cm long so for example if
+                                    %A=100 and jump_frac=20, jump =5 which
+                                    %is 50 cm, this makes sense in a
+                                    %boundary layer. But if A=100 and
+                                    %jump_frac=5, jump=20 blocks, that is
+                                    %200cm!  Jump_frac=10 gives a jump
+                                    %of 100 cm, the same as the water
+                                    %velocity 100cm/sec.  
+                                    %SO 10 is MINIMUM jump_frac
+    moving_old=moving;
+    
+    jump_save(i)=mean(mean(jump));
+    jump_std_save(i)=mean(std(jump));
+                    
+    %go randomly through the indices instead of from 1:n
+    nrand=randperm(n);  %rearrange the indices randomly
+    prand=randperm(p);
+    for nnn=1:n
+        nn=nrand(nnn);
+        for ppp=1:p
+            pp=prand(ppp);
+            nnew=nn+jump(nn,pp);
+            if (nnew > n) | (nnew < 1)
+                nnew=abs(n-abs(nnew));
+            end
+            pnew=pp;  %this will be a cross flow motion eventually
+            
+            moving(nnew,pnew)=moving(nnew,pnew)+moving_old(nn,pp); %this sand is moving
+                                                       %to this new
+                                                       %location from its
+                                                       %old location
+                                                       %(nn,pp)
+            moving(nn,pp)=moving(nn,pp)-moving_old(nn,pp); %this sand moved to the new loc
+                                                       %(above) so remove it from
+                                                       %this location
+            
+        end
+    end
+    
+    mean_move(i)=mean(mean(moving));
+    std_move(i)=mean(std(moving));
+    
+    xprt=moving.*jump;
